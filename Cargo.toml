@@ -1,0 +1,9 @@
+[package]
+name = "http-to-sqlite-rs"
+version = "0.1.14"
+edition = "2024"
+
+[dependencies]
+actix-web = "4"
+serde = { version = "1", features = ["derive"] }
+rusqlite = { version = "0.30", features = ["bundled"] }

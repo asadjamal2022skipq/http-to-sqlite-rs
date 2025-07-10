@@ -67,7 +67,7 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(shared_data.clone())
             .route("/health", web::get().to(health_check))
-            .route("/log/v1", web::post().to(debug_log))
+            .route("/log/v1", web::post().to(receive_log))
     })
     .bind(("0.0.0.0", 6000))?
     .run()

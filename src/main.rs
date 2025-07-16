@@ -37,6 +37,7 @@ struct AppState {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("Running version 0.2.4 of http-to-sqlite-rs");
     let conn = Connection::open("logs.db").expect("Failed to open database");
     conn.execute(
         "CREATE TABLE IF NOT EXISTS logs (

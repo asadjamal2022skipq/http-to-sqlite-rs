@@ -1,6 +1,6 @@
 [package]
 name = "http-to-sqlite-rs"
-version = "0.1.15"
+version = "0.2.3"
 edition = "2024"
 
 [dependencies]

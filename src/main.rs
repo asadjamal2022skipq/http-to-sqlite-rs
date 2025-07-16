@@ -20,6 +20,17 @@ struct LogEntry {
     epoch: Option<i64>,
 }
 
+#[derive(Debug, Deserialize)]
+struct BackendLog {
+    epoch: i64,
+    instance: String,
+    level: String,
+    message: String,
+    source: String,
+    timestamp: String,
+}
+
+
 struct AppState {
     db: Mutex<Connection>,
 }
@@ -42,6 +53,20 @@ async fn main() -> std::io::Result<()> {
         )",
         [],
     ).expect("Failed to create table");
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS backend_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            epoch INTEGER NOT NULL,
+            instance TEXT NOT NULL,
+            level TEXT NOT NULL,
+            message TEXT NOT NULL,
+            source TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        )",
+        [],
+    ).expect("Failed to create backend_logs table");
+
 
     let shared_data = web::Data::new(AppState {
         db: Mutex::new(conn),
@@ -68,6 +93,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(shared_data.clone())
             .route("/health", web::get().to(health_check))
             .route("/log/v1", web::post().to(receive_log))
+            .route("/log/v1/backend", web::post().to(receive_backend_log))
+
     })
     .bind(("0.0.0.0", 6000))?
     .run()
@@ -107,11 +134,38 @@ async fn receive_log(data: web::Data<AppState>, json: web::Json<LogEntry>) -> im
     }
 }
 
-async fn debug_log(body: web::Bytes) -> HttpResponse {
-    // Print raw payload for inspection
-    match std::str::from_utf8(&body) {
-        Ok(txt) => println!("Raw body from Vector: {}", txt),
-        Err(e) => println!("Non-UTF8 body: {:?}, error: {}", &body, e),
+async fn receive_backend_log(data: web::Data<AppState>, json: web::Json<BackendLog>) -> impl Responder {
+    let log = json.into_inner();
+    let conn = data.db.lock().unwrap();
+
+    let result = conn.execute(
+        "INSERT INTO backend_logs (epoch, instance, level, message, source, timestamp)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+            log.epoch,
+            log.instance,
+            log.level,
+            log.message,
+            log.source,
+            log.timestamp,
+        ],
+    );
+
+    match result {
+        Ok(_) => HttpResponse::Ok().body("Backend log saved"),
+        Err(e) => {
+            println!("DB error: {}", e);
+            HttpResponse::InternalServerError().body(format!("DB error: {}", e))
+        },
     }
-    HttpResponse::Ok().body("debug")
 }
+
+
+// async fn debug_log(body: web::Bytes) -> HttpResponse {
+//     // Print raw payload for inspection
+//     match std::str::from_utf8(&body) {
+//         Ok(txt) => println!("Raw body from Vector: {}", txt),
+//         Err(e) => println!("Non-UTF8 body: {:?}, error: {}", &body, e),
+//     }
+//     HttpResponse::Ok().body("debug")
+// }

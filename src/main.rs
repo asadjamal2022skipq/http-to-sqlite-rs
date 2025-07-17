@@ -18,6 +18,7 @@ struct LogEntry {
     source_type: Option<String>,
     #[serde(default)]
     epoch: Option<i64>,
+    instance: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -50,7 +51,8 @@ async fn main() -> std::io::Result<()> {
             agent TEXT,
             timestamp TEXT NOT NULL,
             source_type TEXT NOT NULL,
-            epoch INTEGER NOT NULL
+            epoch INTEGER NOT NULL,
+            instance TEXT NOT NULL
         )",
         [],
     ).expect("Failed to create table");
@@ -111,8 +113,8 @@ async fn receive_log(data: web::Data<AppState>, json: web::Json<LogEntry>) -> im
     let conn = data.db.lock().unwrap();
 
     let result = conn.execute(
-        "INSERT INTO logs (client, request, status, size, referer, agent, timestamp, source_type, epoch)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        "INSERT INTO logs (client, request, status, size, referer, agent, timestamp, source_type, epoch, instance)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             log.client,
             log.request,
@@ -123,6 +125,7 @@ async fn receive_log(data: web::Data<AppState>, json: web::Json<LogEntry>) -> im
             log.timestamp,
             log.source_type.unwrap_or_else(|| "-".to_string()),
             log.epoch.unwrap_or(0),
+            log.instance,
         ],
     );
 
